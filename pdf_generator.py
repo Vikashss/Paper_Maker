@@ -3,7 +3,12 @@ import os
 
 OUTPUT_DIR = "outputs"
 
+def ensure_output_dir():
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 def generate_pdf(data, filename, include_answers=False):
+    ensure_output_dir()  # ✅ IMPORTANT FIX
+
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
