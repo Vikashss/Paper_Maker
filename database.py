@@ -3,13 +3,22 @@ import os
 
 FILE_PATH = "data/questions.json"
 
-def load_questions():
+def ensure_data_file():
+    # Create folder if not exists
+    os.makedirs("data", exist_ok=True)
+
+    # Create file if not exists
     if not os.path.exists(FILE_PATH):
-        return []
+        with open(FILE_PATH, "w") as f:
+            json.dump([], f)
+
+def load_questions():
+    ensure_data_file()
     with open(FILE_PATH, "r") as f:
         return json.load(f)
 
 def save_questions(data):
+    ensure_data_file()
     with open(FILE_PATH, "w") as f:
         json.dump(data, f, indent=4)
 
