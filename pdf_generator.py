@@ -8,6 +8,7 @@ def ensure_output_dir():
 
 class PDF(FPDF):
     def header(self):
+        # Now font is already loaded, so safe
         self.set_font("NotoSans", "B", 14)
         self.cell(0, 10, "Objective Question Paper", 0, 1, "C")
         self.ln(5)
@@ -16,11 +17,12 @@ def generate_pdf(data, filename, include_answers=False):
     ensure_output_dir()
 
     pdf = PDF()
-    pdf.add_page()
 
-    # ✅ ADD UNICODE FONT
+    # ✅ LOAD FONT FIRST (CRITICAL FIX)
     pdf.add_font("NotoSans", "", "fonts/NotoSans-Regular.ttf", uni=True)
     pdf.add_font("NotoSans", "B", "fonts/NotoSans-Bold.ttf", uni=True)
+
+    pdf.add_page()  # header() runs AFTER font is loaded
 
     pdf.set_font("NotoSans", size=12)
 
