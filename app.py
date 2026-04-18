@@ -69,7 +69,6 @@ if st.button("Generate PDFs"):
 
         st.success("✅ PDFs Generated!")
 
-        # FIXED DOWNLOAD
         with open(q_file, "rb") as f:
             st.download_button(
                 "📥 Download Questions PDF",
@@ -97,13 +96,20 @@ if total_q == 0:
 
 else:
     if total_q < 5:
-        st.info(f"ℹ️ Only {total_q} questions available")
+        st.info(f"ℹ️ Only {total_q} question(s) available")
 
-    num_q = st.slider("Number of Questions", 1, total_q, min(10, total_q))
+    # FIXED SLIDER ISSUE
+    if total_q == 1:
+        st.info("Only 1 question available. Test will use it.")
+        num_q = 1
+    else:
+        num_q = st.slider("Number of Questions", 1, total_q, min(10, total_q))
 
+    # START TEST
     if st.button("Start Test"):
-        if total_q < num_q:
-            st.warning(f"⚠️ Only {total_q} questions available. Using all.")
+        if total_q == 1:
+            st.session_state.quiz = questions
+        elif total_q < num_q:
             st.session_state.quiz = questions
         else:
             st.session_state.quiz = random.sample(questions, num_q)
