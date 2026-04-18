@@ -26,7 +26,7 @@ with col2:
 answer = st.selectbox("Correct Answer", ["A", "B", "C", "D"])
 
 if st.button("Add Question"):
-    if subject and question:
+    if subject and question and option_a and option_b and option_c and option_d:
         add_question({
             "subject": subject,
             "question": question,
@@ -40,13 +40,18 @@ if st.button("Add Question"):
         })
         st.success("✅ Question Added!")
     else:
-        st.warning("Fill all fields")
+        st.warning("⚠️ Please fill all fields")
 
 # ================= PDF GENERATOR =================
 st.header("📄 Generate PDF")
 
 subjects = get_subjects()
-selected_subject = st.selectbox("Select Subject", ["All"] + subjects)
+
+if not subjects:
+    st.warning("⚠️ No questions available yet")
+    selected_subject = "All"
+else:
+    selected_subject = st.selectbox("Select Subject", ["All"] + subjects)
 
 if st.button("Generate PDFs"):
     data = load_questions()
@@ -54,18 +59,32 @@ if st.button("Generate PDFs"):
     if selected_subject != "All":
         data = [q for q in data if q["subject"] == selected_subject]
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if not data:
+        st.warning("⚠️ No questions found for this subject")
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    q_file = generate_pdf(data, f"questions_{timestamp}.pdf", False, selected_subject)
-    a_file = generate_pdf(data, f"answers_{timestamp}.pdf", True, selected_subject)
+        q_file = generate_pdf(
+            data,
+            f"questions_{timestamp}.pdf",
+            include_answers=False,
+            subject=selected_subject
+        )
 
-    st.success("PDF Ready!")
+        a_file = generate_pdf(
+            data,
+            f"answers_{timestamp}.pdf",
+            include_answers=True,
+            subject=selected_subject
+        )
 
-    with open(q_file, "rb") as f:
-        st.download_button("Download Questions PDF", f)
+        st.success("✅ PDFs Generated!")
 
-    with open(a_file, "rb") as f:
-        st.download_button("Download Answers PDF", f)
+        with open(q_file, "rb") as f:
+            st.download_button("📥 Download Questions PDF", f)
+
+        with open(a_file, "rb") as f:
+            st.download_button("📥 Download Answers PDF", f)
 
 # ================= SSC PRACTICE MODE =================
 st.header("🧠 SSC Practice Test")
@@ -81,13 +100,14 @@ if questions:
         st.session_state.start_time = time.time()
         st.session_state.submitted = False
 
+# ================= SHOW QUIZ =================
 if "quiz" in st.session_state and not st.session_state.get("submitted", False):
     quiz = st.session_state.quiz
 
     elapsed = int(time.time() - st.session_state.start_time)
     remaining = max(0, 600 - elapsed)
 
-    st.warning(f"⏱️ Time Left: {remaining} sec")
+    st.warning(f"⏱️ Time Left: {remaining} seconds")
 
     if remaining == 0:
         st.session_state.submitted = True
@@ -95,7 +115,12 @@ if "quiz" in st.session_state and not st.session_state.get("submitted", False):
     for i, q in enumerate(quiz):
         st.write(f"{i+1}. {q['question']}")
 
-        choice = st.radio("Answer", ["A","B","C","D"], key=f"q{i}")
+        choice = st.radio(
+            "Select Answer",
+            ["A", "B", "C", "D"],
+            key=f"q_{i}"
+        )
+
         st.session_state.answers[i] = choice
 
     if st.button("Submit Test"):
@@ -124,4 +149,4 @@ if st.session_state.get("submitted"):
 
     final_score = score - negative
 
-    st.success(f"Final Score: {final_score}/{len(quiz)}")
+    st.success(f"✅ Final Score: {final_score} / {len(quiz)}")
