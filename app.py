@@ -40,18 +40,14 @@ if st.button("Add Question"):
         })
         st.success("✅ Question Added!")
     else:
-        st.warning("⚠️ Please fill all fields")
+        st.warning("⚠️ Fill all fields")
 
-# ================= PDF GENERATOR =================
+# ================= PDF =================
 st.header("📄 Generate PDF")
 
 subjects = get_subjects()
 
-if not subjects:
-    st.warning("⚠️ No questions available yet")
-    selected_subject = "All"
-else:
-    selected_subject = st.selectbox("Select Subject", ["All"] + subjects)
+selected_subject = st.selectbox("Select Subject", ["All"] + subjects if subjects else ["All"])
 
 if st.button("Generate PDFs"):
     data = load_questions()
@@ -59,112 +55,151 @@ if st.button("Generate PDFs"):
     if selected_subject != "All":
         data = [q for q in data if q["subject"] == selected_subject]
 
-    if not data:
-        st.warning("⚠️ No questions found")
-    else:
+    if data:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         q_file = generate_pdf(data, f"questions_{timestamp}.pdf", False, selected_subject)
         a_file = generate_pdf(data, f"answers_{timestamp}.pdf", True, selected_subject)
 
-        st.success("✅ PDFs Generated!")
-
         with open(q_file, "rb") as f:
-            st.download_button(
-                "📥 Download Questions PDF",
-                data=f,
-                file_name=f"questions_{timestamp}.pdf",
-                mime="application/pdf"
-            )
+            st.download_button("📥 Questions PDF", f, f"questions_{timestamp}.pdf", "application/pdf")
 
         with open(a_file, "rb") as f:
-            st.download_button(
-                "📥 Download Answers PDF",
-                data=f,
-                file_name=f"answers_{timestamp}.pdf",
-                mime="application/pdf"
-            )
+            st.download_button("📥 Answers PDF", f, f"answers_{timestamp}.pdf", "application/pdf")
+    else:
+        st.warning("No data found")
 
-# ================= SSC PRACTICE MODE =================
-st.header("🧠 SSC Practice Test")
+# ================= PRACTICE =================
+st.header("🧠 Practice Mode")
 
 questions = load_questions()
 total_q = len(questions)
 
-if total_q == 0:
-    st.warning("⚠️ No questions available. Add questions first.")
+if total_q > 0:
 
-else:
-    if total_q < 5:
-        st.info(f"ℹ️ Only {total_q} question(s) available")
-
-    # FIXED SLIDER ISSUE
     if total_q == 1:
-        st.info("Only 1 question available. Test will use it.")
         num_q = 1
     else:
-        num_q = st.slider("Number of Questions", 1, total_q, min(10, total_q))
+        num_q = st.slider("Questions", 1, total_q, min(10, total_q))
 
-    # START TEST
-    if st.button("Start Test"):
-        if total_q == 1:
-            st.session_state.quiz = questions
-        elif total_q < num_q:
-            st.session_state.quiz = questions
-        else:
-            st.session_state.quiz = random.sample(questions, num_q)
-
+    if st.button("Start Practice"):
+        st.session_state.quiz = random.sample(questions, num_q) if total_q >= num_q else questions
         st.session_state.answers = {}
-        st.session_state.start_time = time.time()
         st.session_state.submitted = False
 
-# ================= SHOW QUIZ =================
-if "quiz" in st.session_state and not st.session_state.get("submitted", False):
-    quiz = st.session_state.quiz
-
-    elapsed = int(time.time() - st.session_state.start_time)
-    remaining = max(0, 600 - elapsed)
-
-    st.warning(f"⏱️ Time Left: {remaining} seconds")
-
-    if remaining == 0:
-        st.session_state.submitted = True
-
-    for i, q in enumerate(quiz):
+if "quiz" in st.session_state and not st.session_state.get("submitted"):
+    for i, q in enumerate(st.session_state.quiz):
         st.write(f"{i+1}. {q['question']}")
-
-        choice = st.radio(
-            "Select Answer",
-            ["A", "B", "C", "D"],
-            key=f"q_{i}"
-        )
-
+        choice = st.radio("Answer", ["A","B","C","D"], key=f"p{i}")
         st.session_state.answers[i] = choice
 
-    if st.button("Submit Test"):
+    if st.button("Submit Practice"):
         st.session_state.submitted = True
 
-# ================= RESULT =================
 if st.session_state.get("submitted"):
-    quiz = st.session_state.quiz
-    answers = st.session_state.answers
-
     score = 0
-    negative = 0
-
-    st.subheader("📊 Result")
-
-    for i, q in enumerate(quiz):
-        correct = q["answer"]
-        user_ans = answers.get(i)
-
-        if user_ans == correct:
+    for i, q in enumerate(st.session_state.quiz):
+        if st.session_state.answers.get(i) == q["answer"]:
             score += 1
-        else:
-            negative += 0.25
+    st.success(f"Score: {score}/{len(st.session_state.quiz)}")
 
-        st.write(f"Q{i+1}: Your: {user_ans} | Correct: {correct}")
+# ================= SSC FULL TEST =================
+st.header("🏆 SSC Full Test (Testbook Style)")
 
-    final_score = score - negative
+sections = {
+    "Reasoning": [q for q in questions if q["subject"].lower() == "reasoning"],
+    "GK": [q for q in questions if q["subject"].lower() == "gk"],
+    "Math": [q for q in questions if q["subject"].lower() == "math"],
+    "English": [q for q in questions if q["subject"].lower() == "english"]
+}
 
-    st.success(f"✅ Final Score: {final_score} / {len(quiz)}")
+if st.button("Start SSC Test"):
+    st.session_state.section_names = list(sections.keys())
+    st.session_state.section_index = 0
+    st.session_state.q_index = 0
+    st.session_state.answers = {}
+    st.session_state.start_time = time.time()
+
+# ================= TEST UI =================
+if "section_index" in st.session_state:
+
+    if st.session_state.section_index >= len(sections):
+        st.header("📊 Result")
+
+        score = 0
+        neg = 0
+
+        for v in st.session_state.answers.values():
+            if v["selected"] == v["correct"]:
+                score += 1
+            else:
+                neg += 0.25
+
+        st.success(f"Final Score: {score - neg}")
+        st.stop()
+
+    section = st.session_state.section_names[st.session_state.section_index]
+    qs = sections[section]
+
+    if not qs:
+        st.warning(f"No questions in {section}")
+        st.session_state.section_index += 1
+        st.experimental_rerun()
+
+    st.subheader(f"📘 {section}")
+
+    # TIMER
+    elapsed = int(time.time() - st.session_state.start_time)
+    remaining = max(0, 900 - elapsed)
+
+    st.warning(f"⏱️ {remaining} sec left")
+
+    if remaining == 0:
+        st.session_state.section_index += 1
+        st.session_state.q_index = 0
+        st.session_state.start_time = time.time()
+        st.experimental_rerun()
+
+    i = st.session_state.q_index
+    q = qs[i]
+
+    st.write(f"Q{i+1}. {q['question']}")
+
+    key = f"{section}_{i}"
+
+    choice = st.radio("Answer", ["A","B","C","D"], key=key)
+
+    st.session_state.answers[key] = {
+        "selected": choice,
+        "correct": q["answer"]
+    }
+
+    # NAVIGATION
+    col1, col2, col3 = st.columns(3)
+
+    if col1.button("⬅ Prev") and i > 0:
+        st.session_state.q_index -= 1
+        st.experimental_rerun()
+
+    if col2.button("Next ➡") and i < len(qs)-1:
+        st.session_state.q_index += 1
+        st.experimental_rerun()
+
+    if col3.button("Next Section"):
+        st.session_state.section_index += 1
+        st.session_state.q_index = 0
+        st.session_state.start_time = time.time()
+        st.experimental_rerun()
+
+    # PALETTE
+    st.markdown("### 🧭 Palette")
+
+    cols = st.columns(10)
+
+    for idx in range(len(qs)):
+        k = f"{section}_{idx}"
+        color = "🟢" if k in st.session_state.answers else "🔴"
+
+        if cols[idx % 10].button(f"{color} {idx+1}"):
+            st.session_state.q_index = idx
+            st.experimental_rerun()
