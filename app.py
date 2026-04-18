@@ -60,42 +60,54 @@ if st.button("Generate PDFs"):
         data = [q for q in data if q["subject"] == selected_subject]
 
     if not data:
-        st.warning("⚠️ No questions found for this subject")
+        st.warning("⚠️ No questions found")
     else:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        q_file = generate_pdf(
-            data,
-            f"questions_{timestamp}.pdf",
-            include_answers=False,
-            subject=selected_subject
-        )
-
-        a_file = generate_pdf(
-            data,
-            f"answers_{timestamp}.pdf",
-            include_answers=True,
-            subject=selected_subject
-        )
+        q_file = generate_pdf(data, f"questions_{timestamp}.pdf", False, selected_subject)
+        a_file = generate_pdf(data, f"answers_{timestamp}.pdf", True, selected_subject)
 
         st.success("✅ PDFs Generated!")
 
+        # FIXED DOWNLOAD
         with open(q_file, "rb") as f:
-            st.download_button("📥 Download Questions PDF", f)
+            st.download_button(
+                "📥 Download Questions PDF",
+                data=f,
+                file_name=f"questions_{timestamp}.pdf",
+                mime="application/pdf"
+            )
 
         with open(a_file, "rb") as f:
-            st.download_button("📥 Download Answers PDF", f)
+            st.download_button(
+                "📥 Download Answers PDF",
+                data=f,
+                file_name=f"answers_{timestamp}.pdf",
+                mime="application/pdf"
+            )
 
 # ================= SSC PRACTICE MODE =================
 st.header("🧠 SSC Practice Test")
 
 questions = load_questions()
+total_q = len(questions)
 
-if questions:
-    num_q = st.slider("Number of Questions", 5, min(50, len(questions)), 10)
+if total_q == 0:
+    st.warning("⚠️ No questions available. Add questions first.")
+
+else:
+    if total_q < 5:
+        st.info(f"ℹ️ Only {total_q} questions available")
+
+    num_q = st.slider("Number of Questions", 1, total_q, min(10, total_q))
 
     if st.button("Start Test"):
-        st.session_state.quiz = random.sample(questions, num_q)
+        if total_q < num_q:
+            st.warning(f"⚠️ Only {total_q} questions available. Using all.")
+            st.session_state.quiz = questions
+        else:
+            st.session_state.quiz = random.sample(questions, num_q)
+
         st.session_state.answers = {}
         st.session_state.start_time = time.time()
         st.session_state.submitted = False
