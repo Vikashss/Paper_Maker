@@ -1,31 +1,36 @@
-import json
-import os
+import streamlit as st
+from supabase import create_client
 
-FILE_PATH = "data/questions.json"
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
-def ensure_data_file():
-    # Create folder if not exists
-    os.makedirs("data", exist_ok=True)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-    # Create file if not exists
-    if not os.path.exists(FILE_PATH):
-        with open(FILE_PATH, "w") as f:
-            json.dump([], f)
+def add_question(data):
+    supabase.table("questions").insert({
+        "subject": data["subject"],
+        "question": data["question"],
+        "option_a": data["options"]["A"],
+        "option_b": data["options"]["B"],
+        "option_c": data["options"]["C"],
+        "option_d": data["options"]["D"],
+        "answer": data["answer"]
+    }).execute()
 
 def load_questions():
-    ensure_data_file()
-    with open(FILE_PATH, "r") as f:
-        return json.load(f)
+    response = supabase.table("questions").select("*").execute()
 
-def save_questions(data):
-    ensure_data_file()
-    with open(FILE_PATH, "w") as f:
-        json.dump(data, f, indent=4)
-
-def add_question(question_data):
-    data = load_questions()
-    data.append(question_data)
-    save_questions(data)
+    return [{
+        "subject": r["subject"],
+        "question": r["question"],
+        "options": {
+            "A": r["option_a"],
+            "B": r["option_b"],
+            "C": r["option_c"],
+            "D": r["option_d"]
+        },
+        "answer": r["answer"]
+    } for r in response.data]
 
 def get_subjects():
     data = load_questions()
