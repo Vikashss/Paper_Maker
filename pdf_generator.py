@@ -1,43 +1,42 @@
-from fpdf import FPDF
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 import os
 
 OUTPUT_DIR = "outputs"
 
-def ensure_output_dir():
+def generate_pdf(data, filename, include_answers=False, subject="General"):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-class PDF(FPDF):
-    def header(self):
-        # Now font is already loaded, so safe
-        self.set_font("NotoSans", "B", 14)
-        self.cell(0, 10, "Objective Question Paper", 0, 1, "C")
-        self.ln(5)
+    filepath = os.path.join(OUTPUT_DIR, filename)
 
-def generate_pdf(data, filename, include_answers=False):
-    ensure_output_dir()
+    pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
 
-    pdf = PDF()
+    doc = SimpleDocTemplate(filepath, pagesize=A4)
+    styles = getSampleStyleSheet()
 
-    # ✅ LOAD FONT FIRST (CRITICAL FIX)
-    pdf.add_font("NotoSans", "", "fonts/NotoSans-Regular.ttf", uni=True)
-    pdf.add_font("NotoSans", "B", "fonts/NotoSans-Bold.ttf", uni=True)
+    story = []
 
-    pdf.add_page()  # header() runs AFTER font is loaded
+    story.append(Paragraph("<b>SSC Practice Paper</b>", styles["Title"]))
+    story.append(Spacer(1, 10))
 
-    pdf.set_font("NotoSans", size=12)
+    story.append(Paragraph(f"<b>Subject:</b> {subject}", styles["Normal"]))
+    story.append(Paragraph("<b>Time:</b> 60 min | <b>Marks:</b> 100", styles["Normal"]))
+    story.append(Spacer(1, 10))
 
     for i, q in enumerate(data, 1):
-        pdf.multi_cell(0, 10, f"{i}. {q['question']}")
-
-        for key, val in q['options'].items():
-            pdf.cell(0, 10, f"{key}. {val}", ln=True)
+        story.append(Paragraph(f"{i}. {q['question']}", styles["Normal"]))
+        story.append(Paragraph(f"A. {q['options']['A']}", styles["Normal"]))
+        story.append(Paragraph(f"B. {q['options']['B']}", styles["Normal"]))
+        story.append(Paragraph(f"C. {q['options']['C']}", styles["Normal"]))
+        story.append(Paragraph(f"D. {q['options']['D']}", styles["Normal"]))
 
         if include_answers:
-            pdf.cell(0, 10, f"Answer: {q['answer']}", ln=True)
+            story.append(Paragraph(f"<b>Answer:</b> {q['answer']}", styles["Normal"]))
 
-        pdf.ln(5)
+        story.append(Spacer(1, 10))
 
-    filepath = os.path.join(OUTPUT_DIR, filename)
-    pdf.output(filepath)
-
+    doc.build(story)
     return filepath
