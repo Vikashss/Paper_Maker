@@ -46,7 +46,6 @@ if st.button("Add Question"):
 st.header("📄 Generate PDF")
 
 subjects = get_subjects()
-
 selected_subject = st.selectbox("Select Subject", ["All"] + subjects if subjects else ["All"])
 
 if st.button("Generate PDFs"):
@@ -107,10 +106,10 @@ if st.session_state.get("submitted"):
 st.header("🏆 SSC Full Test (Testbook Style)")
 
 sections = {
-    "Reasoning": [q for q in questions if q["subject"].lower() == "reasoning"],
-    "GK": [q for q in questions if q["subject"].lower() == "gk"],
-    "Math": [q for q in questions if q["subject"].lower() == "math"],
-    "English": [q for q in questions if q["subject"].lower() == "english"]
+    "Reasoning": [q for q in questions if "reason" in q["subject"].lower()],
+    "GK": [q for q in questions if "gk" in q["subject"].lower()],
+    "Math": [q for q in questions if "math" in q["subject"].lower()],
+    "English": [q for q in questions if "english" in q["subject"].lower()]
 }
 
 if st.button("Start SSC Test"):
@@ -123,6 +122,7 @@ if st.button("Start SSC Test"):
 # ================= TEST UI =================
 if "section_index" in st.session_state:
 
+    # FINISH TEST
     if st.session_state.section_index >= len(sections):
         st.header("📊 Result")
 
@@ -141,10 +141,11 @@ if "section_index" in st.session_state:
     section = st.session_state.section_names[st.session_state.section_index]
     qs = sections[section]
 
+    # SKIP EMPTY SECTION SAFELY
     if not qs:
-        st.warning(f"No questions in {section}")
+        st.warning(f"No questions in {section}, skipping...")
         st.session_state.section_index += 1
-        st.experimental_rerun()
+        st.rerun()
 
     st.subheader(f"📘 {section}")
 
@@ -158,7 +159,7 @@ if "section_index" in st.session_state:
         st.session_state.section_index += 1
         st.session_state.q_index = 0
         st.session_state.start_time = time.time()
-        st.experimental_rerun()
+        st.rerun()
 
     i = st.session_state.q_index
     q = qs[i]
@@ -179,19 +180,19 @@ if "section_index" in st.session_state:
 
     if col1.button("⬅ Prev") and i > 0:
         st.session_state.q_index -= 1
-        st.experimental_rerun()
+        st.rerun()
 
     if col2.button("Next ➡") and i < len(qs)-1:
         st.session_state.q_index += 1
-        st.experimental_rerun()
+        st.rerun()
 
     if col3.button("Next Section"):
         st.session_state.section_index += 1
         st.session_state.q_index = 0
         st.session_state.start_time = time.time()
-        st.experimental_rerun()
+        st.rerun()
 
-    # PALETTE
+    # QUESTION PALETTE
     st.markdown("### 🧭 Palette")
 
     cols = st.columns(10)
@@ -202,4 +203,4 @@ if "section_index" in st.session_state:
 
         if cols[idx % 10].button(f"{color} {idx+1}"):
             st.session_state.q_index = idx
-            st.experimental_rerun()
+            st.rerun()
